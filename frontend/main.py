@@ -1,17 +1,15 @@
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from backend.chat import CohereChat
 import streamlit as st
 from typing import Dict
 import json
 from collections import Counter
 import re
 
-
-from backend.chat import BedrockChat
-
-
 # Page config
 st.set_page_config(
-    page_title="Japanese Learning Assistant",
-    page_icon="🎌",
+    page_title="Korean Learning Assistant",
     layout="wide"
 )
 
@@ -23,9 +21,9 @@ if 'messages' not in st.session_state:
 
 def render_header():
     """Render the header section"""
-    st.title("🎌 Japanese Learning Assistant")
+    st.title("Korean Learning Assistant")
     st.markdown("""
-    Transform YouTube transcripts into interactive Japanese learning experiences.
+    Transform YouTube transcripts into interactive Korean learning experiences.
     
     This tool demonstrates:
     - Base LLM Capabilities
@@ -43,7 +41,7 @@ def render_sidebar():
         selected_stage = st.radio(
             "Select Stage:",
             [
-                "1. Chat with Nova",
+                "1. Chat with Cohere",
                 "2. Raw Transcript",
                 "3. Structured Data",
                 "4. RAG Implementation",
@@ -53,9 +51,9 @@ def render_sidebar():
         
         # Stage descriptions
         stage_info = {
-            "1. Chat with Nova": """
+            "1. Chat with Cohere": """
             **Current Focus:**
-            - Basic Japanese learning
+            - Basic Korean learning
             - Understanding LLM capabilities
             - Identifying limitations
             """,
@@ -96,15 +94,15 @@ def render_sidebar():
 
 def render_chat_stage():
     """Render an improved chat interface"""
-    st.header("Chat with Nova")
+    st.header("Chat with Cohere")
 
     # Initialize BedrockChat instance if not in session state
     if 'bedrock_chat' not in st.session_state:
-        st.session_state.bedrock_chat = BedrockChat()
+        st.session_state.bedrock_chat = CohereChat()
 
     # Introduction text
     st.markdown("""
-    Start by exploring Nova's base Japanese language capabilities. Try asking questions about Japanese grammar, 
+    Start by exploring Cohere's base Korean language capabilities. Try asking questions about Korean grammar, 
     vocabulary, or cultural aspects.
     """)
 
@@ -118,7 +116,7 @@ def render_chat_stage():
             st.markdown(message["content"])
 
     # Chat input area
-    if prompt := st.chat_input("Ask about Japanese language..."):
+    if prompt := st.chat_input("Ask about Korean language..."):
         # Process the user input
         process_message(prompt)
 
@@ -126,12 +124,12 @@ def render_chat_stage():
     with st.sidebar:
         st.markdown("### Try These Examples")
         example_questions = [
-            "How do I say 'Where is the train station?' in Japanese?",
-            "Explain the difference between は and が",
-            "What's the polite form of 食べる?",
-            "How do I count objects in Japanese?",
-            "What's the difference between こんにちは and こんばんは?",
-            "How do I ask for directions politely?"
+            "How do I say 'Where is the train station?' in Korean?",
+            "Explain the difference between 은/는 and 이/가",
+            "What's the polite form of 먹다?",
+            "How do I count objects in Korean?",
+            "What's the difference between 안녕하세요 and 안녕히 주무세요?",
+            "How do I ask for directions politely in Korean?"
         ]
         
         for q in example_questions:
@@ -163,19 +161,20 @@ def process_message(message: str):
 
 
 def count_characters(text):
-    """Count Japanese and total characters in text"""
+    """Count Korean and total characters in text"""
     if not text:
         return 0, 0
         
-    def is_japanese(char):
+    def is_korean(char):
         return any([
-            '\u4e00' <= char <= '\u9fff',  # Kanji
-            '\u3040' <= char <= '\u309f',  # Hiragana
-            '\u30a0' <= char <= '\u30ff',  # Katakana
+            '\u1100' <= char <= '\u11ff',  # Hangul Jamo (basic consonants/vowels)
+            '\u3130' <= char <= '\u318f',  # Hangul Compatibility Jamo
+            '\uac00' <= char <= '\ud7a3',  # Hangul syllables (가–힣)
         ])
+
     
-    jp_chars = sum(1 for char in text if is_japanese(char))
-    return jp_chars, len(text)
+    kr_chars = sum(1 for char in text if is_korean(char))
+    return kr_chars, len(text)
 
 def render_transcript_stage():
     """Render the raw transcript stage"""
@@ -184,7 +183,7 @@ def render_transcript_stage():
     # URL input
     url = st.text_input(
         "YouTube URL",
-        placeholder="Enter a Japanese lesson YouTube URL"
+        placeholder="Enter a Korean lesson YouTube URL"
     )
     
     # Download button and processing
@@ -222,12 +221,12 @@ def render_transcript_stage():
         st.subheader("Transcript Stats")
         if st.session_state.transcript:
             # Calculate stats
-            jp_chars, total_chars = count_characters(st.session_state.transcript)
+            kr_chars, total_chars = count_characters(st.session_state.transcript)
             total_lines = len(st.session_state.transcript.split('\n'))
             
             # Display stats
             st.metric("Total Characters", total_chars)
-            st.metric("Japanese Characters", jp_chars)
+            st.metric("Korean Characters", kr_chars)
             st.metric("Total Lines", total_lines)
         else:
             st.info("Load a transcript to see statistics")
@@ -255,7 +254,7 @@ def render_rag_stage():
     # Query input
     query = st.text_input(
         "Test Query",
-        placeholder="Enter a question about Japanese..."
+        placeholder="Enter a question about Korean..."
     )
     
     col1, col2 = st.columns(2)
@@ -305,7 +304,7 @@ def main():
     selected_stage = render_sidebar()
     
     # Render appropriate stage
-    if selected_stage == "1. Chat with Nova":
+    if selected_stage == "1. Chat with Cohere":
         render_chat_stage()
     elif selected_stage == "2. Raw Transcript":
         render_transcript_stage()

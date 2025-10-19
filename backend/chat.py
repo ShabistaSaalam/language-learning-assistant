@@ -1,49 +1,66 @@
-# Create BedrockChat
-# bedrock_chat.py
-import boto3
-import streamlit as st
-from typing import Optional, Dict, Any
+# cohere_chat.py
+import os
+from typing import Optional, Dict, Any, List
+from dotenv import load_dotenv
+from cohere import ClientV2
 
+# Load environment variables
+load_dotenv()
+COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 
-# Model ID
-MODEL_ID = "amazon.nova-micro-v1:0"
+if not COHERE_API_KEY:
+    raise ValueError("Cohere API key not found in .env")
 
+MODEL_NAME = "command-a-03-2025"  # Latest Cohere chat model
 
+class CohereChat:
+    def __init__(self, model_name: str = MODEL_NAME):
+        """Initialize Cohere ClientV2 and conversation history"""
+        self.client = ClientV2(api_key=COHERE_API_KEY)
+        self.model_name = model_name
+        self.messages: List[Dict[str, str]] = []  # multi-turn chat messages
 
-class BedrockChat:
-    def __init__(self, model_id: str = MODEL_ID):
-        """Initialize Bedrock chat client"""
-        self.bedrock_client = boto3.client('bedrock-runtime', region_name="us-east-1")
-        self.model_id = model_id
+    def generate_response(
+        self, message: str, inference_config: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
+        """Generate a response using Cohere Chat API v2"""
+        if not message.strip():
+            return None
 
-    def generate_response(self, message: str, inference_config: Optional[Dict[str, Any]] = None) -> Optional[str]:
-        """Generate a response using Amazon Bedrock"""
-        if inference_config is None:
-            inference_config = {"temperature": 0.7}
-
-        messages = [{
-            "role": "user",
-            "content": [{"text": message}]
-        }]
+        temperature = inference_config.get("temperature", 0.7) if inference_config else 0.7
+        max_tokens = inference_config.get("max_tokens", 200) if inference_config else 200
 
         try:
-            response = self.bedrock_client.converse(
-                modelId=self.model_id,
-                messages=messages,
-                inferenceConfig=inference_config
+            # Add user message to conversation
+            self.messages.append({"role": "user", "content": message})
+
+            # Call chat API
+            response = self.client.chat(
+                model=self.model_name,
+                messages=self.messages,
+                temperature=temperature,
+                max_tokens=max_tokens
             )
-            return response['output']['message']['content'][0]['text']
-            
+
+            # Extract assistant reply
+            assistant_msg = response.message.content[0].text.strip()
+
+            # Append assistant response to messages for multi-turn
+            self.messages.append({"role": "assistant", "content": assistant_msg})
+
+            return assistant_msg
+
         except Exception as e:
-            st.error(f"Error generating response: {str(e)}")
+            print(f"Error generating response: {str(e)}")
             return None
 
 
 if __name__ == "__main__":
-    chat = BedrockChat()
+    chat = CohereChat()
+    print("Chatbot ready! Type '/exit' to quit.\n")
     while True:
         user_input = input("You: ")
-        if user_input.lower() == '/exit':
+        if user_input.lower() == "/exit":
             break
         response = chat.generate_response(user_input)
-        print("Bot:", response)
+        print("Bot:", response or "(no response)")
